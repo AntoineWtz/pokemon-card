@@ -5,65 +5,63 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; 
+renderer.outputEncoding = THREE.sRGBEncoding; 
 document.getElementById('container').appendChild(renderer.domElement);
 
-// Load card texture
+// Load textures
 const loader = new THREE.TextureLoader();
-const texture = loader.load(
-    './carapuce-card.png', // Path to your card image
-    () => console.log('Texture loaded successfully'),
-    undefined,
-    (err) => console.error('Error loading texture', err)
-);
+const cardTexture = loader.load('./carapuce-card.png');
+const normalMap = loader.load('./Water_002_NORM.jpg'); 
 
-// Create the card geometry
+// Create card geometry
 const cardWidth = 5;
 const cardHeight = 7;
 const geometry = new THREE.PlaneGeometry(cardWidth, cardHeight);
 
-// Create material with texture (no lighting interaction)
-const material = new THREE.MeshBasicMaterial({
-    map: texture,
-    transparent: true,
-    side: THREE.DoubleSide,  // Display on both sides
+// Create card material with holographic effect
+const material = new THREE.MeshStandardMaterial({
+    map: cardTexture,       
+    normalMap: normalMap,   
+    metalness: 0.9,         
+    roughness: 0.8,         
+    transparent: true,      
+    side: THREE.DoubleSide, 
 });
 
 // Create the card mesh
 const card = new THREE.Mesh(geometry, material);
 scene.add(card);
 
-// Add dynamic holographic lights (we'll use a ShaderMaterial for this)
-const light1 = new THREE.PointLight(0xff00ff, 1.5, 50);
-light1.position.set(10, 10, 10);
-scene.add(light1);
+// Add environment lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 1); 
+scene.add(ambientLight);
 
-const light2 = new THREE.PointLight(0x00ffff, 1.5, 50);
-light2.position.set(-10, -10, 10);
-scene.add(light2);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(10, 10, 10);
+scene.add(directionalLight);
 
-const light3 = new THREE.PointLight(0xffff00, 1.5, 50);
-light3.position.set(0, 10, -10);
-scene.add(light3);
+// Add point lights for dynamic reflections
+const pointLight1 = new THREE.PointLight(0xff00ff, 1, 90);
+pointLight1.position.set(10, 10, 10);
+scene.add(pointLight1);
 
-// Create a spotlight to simulate glow effect
-const spotLight = new THREE.SpotLight(0x00ff00, 2, 50, Math.PI / 4, 0.5, 1);
-spotLight.position.set(0, 5, 10);
-scene.add(spotLight);
+const pointLight2 = new THREE.PointLight(0x00ffff, 1, 50);
+pointLight2.position.set(-10, -10, 10);
+scene.add(pointLight2);
 
 // Rotate lights dynamically
 function animateLights() {
     const time = Date.now() * 0.001;
-    light1.position.x = Math.sin(time) * 10;
-    light1.position.z = Math.cos(time) * 10;
+    pointLight1.position.x = Math.sin(time) * 10;
+    pointLight1.position.z = Math.cos(time) * 10;
 
-    light2.position.y = Math.sin(time * 0.8) * 10;
-    light2.position.x = Math.cos(time * 0.8) * 10;
-
-    light3.position.z = Math.sin(time * 1.2) * 10;
-    light3.position.y = Math.cos(time * 1.2) * 10;
+    pointLight2.position.y = Math.sin(time * 0.8) * 10;
+    pointLight2.position.x = Math.cos(time * 0.8) * 10;
 }
 
 // Position the card and camera
+card.position.set(0, 0, 0);
 camera.position.z = 10;
 
 // Add mouse interaction
@@ -71,28 +69,25 @@ let mouseX = 0;
 let mouseY = 0;
 
 document.addEventListener('mousemove', (event) => {
-    const normalizedX = (event.clientX / window.innerWidth) * 2 - 1;
-    const normalizedY = -(event.clientY / window.innerHeight) * 2 + 1;
-    mouseX = normalizedX;
-    mouseY = normalizedY;
+    mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+    mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
 });
 
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
 
-    animateLights();
-
     // Add interactive rotation
-    card.rotation.y = mouseX * 0.5;
-    card.rotation.x = mouseY * 0.5;
+    card.rotation.y = mouseX * 0.3;
+    card.rotation.x = mouseY * 0.3;
 
+    animateLights();
     renderer.render(scene, camera);
 }
 
 animate();
 
-// Handle window resize
+// Handle window resizing
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
